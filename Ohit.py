@@ -166,7 +166,7 @@ class Ohit:
         self.J_HDIC = list(np.sort(J_HDIC))
         self.J_Trim = list(np.sort(J_Trim))
         
-    def predict(self,X_test,y_test):
+    def predict(self,X_test):
         conf = self.conf
         X = self.X.copy()
         y = self.y.copy()
@@ -202,36 +202,7 @@ class Ohit:
         fit = sm.OLS(endog = y,exog = X[J_Trim]).fit()    
         self.fit = fit
 
-        # predict
-        self.yPred_train = fit.get_prediction(X[J_Trim]).summary_frame(alpha = conf)
-        self.yPred_test = fit.get_prediction(X_test[J_Trim]).summary_frame(alpha = conf)
-        
-        # confident
-        # result_train_lower = self.yPred_train['mean_ci_lower']
-        # result_train_lower[result_train_lower<0] = 0
-        # result_test_lower = self.yPred_test['obs_ci_lower']
-        # result_test_lower[result_test_lower<0] = 0
-        # self.pred_test =  yPred
-        # self.pred = fit.predict()
-        # if plot:
-        #     plt.figure(figsize=(12,5), dpi=100)
-        #     plt.scatter(self.y.index,self.y)
-        #     plt.plot(self.y, label="train")
-            
-        #     plt.scatter(y_test.index,y_test)
-        #     plt.plot(y_test, label="test")
-        #     plt.scatter(self.y.index,self.pred)
-        #     plt.plot(self.pred, label="train_pred")
-        #     plt.fill_between( self.yPred_train.index, self.yPred_train['mean_ci_lower'], self.yPred_train['mean_ci_upper'], 
-        #         color='k', alpha=.15)
-        #     plt.scatter(y_test.index,yPred)
-        #     plt.plot(yPred, label="test_pred")
-        #     plt.fill_between( self.yPred_test.index, self.yPred_test['obs_ci_lower'], self.yPred_test['obs_ci_upper'], 
-        #         color='k', alpha=.15)
-        #     plt.legend(loc="best")
-        #     plt.title('Forecast vs Actuals({},{}-step forcast)'.format(name,step))
-        #     plt.legend(loc='upper left', fontsize=8)
-        #     plt.show()
+   
     def OGA_HDIC(self):
         self.OGA()
         self.HDIC_Trim()
