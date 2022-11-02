@@ -167,7 +167,7 @@ class Ohit:
         self.J_HDIC = list(np.sort(J_HDIC))
         self.J_Trim = list(np.sort(J_Trim))
     
-    def predict(self,X_test,y_test):
+    def predict(self,X_test):
         if X_test.shape[1] != self.X.shape[1]:
             print('new data has different columns with original data')
         try:
