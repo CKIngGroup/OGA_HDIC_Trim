@@ -1,6 +1,6 @@
 # %%
-#import Ohit
-#from Ohit import Ohit
+import Ohit
+from Ohit import Ohit
 from sklearn.model_selection import train_test_split
 def generate_data1(n,p,q):
 
