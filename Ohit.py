@@ -7,7 +7,7 @@ from math import floor
 import numpy as np
 
 class Ohit:
-    def __init__(self,X,y,Kn = None,c1 = 3,c2 = 2,c3 = 2,HDIC_Type='HDAIC',init = None,conf = 0.01,intercept = True):
+    def __init__(self,X,y,Kn = None,c1 = 5,c2 = 2,c3 = 2,HDIC_Type='HDAIC',init = None,conf = 0.01,intercept = True):
         # -----------------------#
         # X is a n*p dataframe/numpy
         # y is a n*1 dataframe/numpy
@@ -71,7 +71,7 @@ class Ohit:
         # interation 1
         ## normalize
         dy = y-np.mean(y)
-        dx = X.apply(lambda x: x-np.mean(x), axis = 1)
+        dx = X.apply(lambda x: x-np.mean(x), axis = 0)
         self.dy = dy.copy()
         self.dx = dx.copy()
         ## init preprocessing
@@ -95,7 +95,7 @@ class Ohit:
             XJhat = pd.concat([XJhat,rq],axis = 1)
         except:
             rq = dx[[Jhat[init_len]]]
-            XJhat = rq/(np.sum(rq**2))**(1/2)
+            XJhat = rq/np.sqrt(np.sum(rq**2))
         u = dy - XJhat.iloc[:,[init_len]].dot(XJhat.iloc[:,[init_len]].T).dot(dy)
         Sigma2hat[0] = np.mean(u**2)
         if K>1:
@@ -104,16 +104,14 @@ class Ohit:
                 aSSE[Jhat[:k]] = 0
                 Jhat[k] = aSSE.idxmax()
                 rq = dx[[Jhat[k]]] - XJhat.dot(XJhat.T).dot(dx[[Jhat[k]]])
-                rq = (rq/(np.sum(rq**2))**(1/2))
+                rq = (rq/np.sqrt(np.sum(rq**2)))
                 XJhat = pd.concat((XJhat,rq),axis = 1) 
                 u = u - XJhat.iloc[:,[k]].dot(XJhat.iloc[:,[k]].T).dot(u)
-                fit = sm.OLS(endog = dy,exog = XJhat).fit()
-                uPath = fit.resid
-                Sigma2hat[k-init_len] = np.mean(uPath**2)
+                Sigma2hat[k-init_len] = np.mean(u**2)
         self.Jhat  = Jhat
         self.Sigma2hat = Sigma2hat
         
-    def HDIC(self):
+    def HDIC_Trim(self):
         HDIC_Type = self.type
         n = self.n
         p = self.p
@@ -138,10 +136,11 @@ class Ohit:
         
         # get min hdic
         hdic = (n * np.log(Sigma2hat)) + (np.arange(self.K)) * omega_n * np.log(p)
+        self.HDIC = hdic
         kn_hat = np.argmin(hdic)
         J_HDIC = (self.Jhat[:(kn_hat+1+init_len)])
         J_Trim = self.Jhat[:(kn_hat+1+init_len)]
-        trim_pos = np.zeros(kn_hat+init_len, dtype= bool)
+        trim_pos = np.zeros(kn_hat+init_len+1, dtype= bool)
         trim_pos[:init_len] = True
 
         # get benchmark for trim
@@ -150,7 +149,7 @@ class Ohit:
         benchmark = n*np.log(np.mean(uHDIC**2)) + (kn_hat ) * omega_n * np.log(p)
         if kn_hat>0:
             # start from 
-            for l in range(init_len,kn_hat+init_len):
+            for l in range(init_len,kn_hat+init_len+1):
                 JDrop1 = np.delete(J_HDIC,l)
                 fit = sm.OLS(endog = dy,exog = dx[JDrop1]).fit()
                 uDrop1 = fit.resid
@@ -166,26 +165,26 @@ class Ohit:
             J_Trim = J_HDIC
         self.J_HDIC = list(np.sort(J_HDIC))
         self.J_Trim = list(np.sort(J_Trim))
-    
-    def predict(self,X_test):
+        
+    def predict(self,X_test,y_test):
+        conf = self.conf
+        X = self.X.copy()
+        y = self.y.copy()
+        n = self.n
+        J_Trim = self.J_Trim.copy()
         if X_test.shape[1] != self.X.shape[1]:
             print('new data has different columns with original data')
         try:
             self.J_Trim
         except:
             self.OGA()
-            self.HDIC()
+            self.HDIC_Trim()
         if type(X_test).__module__ == 'numpy':
             X_test = pd.DataFrame(X_test)
             X_test.columns = ['V'+str(i+1) for i in range(X.shape[1])]
         if type(y_test).__module__ == 'numpy':    
             y_test = y_test.reshape(-1)
             y_test = pd.DataFrame(y_test)
-        conf = self.conf
-        X = self.X.copy()
-        y = self.y.copy()
-        n = self.n
-        J_Trim = self.J_Trim.copy()
         # check intercept
 
         if self.intercept:
@@ -207,10 +206,34 @@ class Ohit:
         self.yPred_train = fit.get_prediction(X[J_Trim]).summary_frame(alpha = conf)
         self.yPred_test = fit.get_prediction(X_test[J_Trim]).summary_frame(alpha = conf)
         
-
+        # confident
+        # result_train_lower = self.yPred_train['mean_ci_lower']
+        # result_train_lower[result_train_lower<0] = 0
+        # result_test_lower = self.yPred_test['obs_ci_lower']
+        # result_test_lower[result_test_lower<0] = 0
+        # self.pred_test =  yPred
+        # self.pred = fit.predict()
+        # if plot:
+        #     plt.figure(figsize=(12,5), dpi=100)
+        #     plt.scatter(self.y.index,self.y)
+        #     plt.plot(self.y, label="train")
+            
+        #     plt.scatter(y_test.index,y_test)
+        #     plt.plot(y_test, label="test")
+        #     plt.scatter(self.y.index,self.pred)
+        #     plt.plot(self.pred, label="train_pred")
+        #     plt.fill_between( self.yPred_train.index, self.yPred_train['mean_ci_lower'], self.yPred_train['mean_ci_upper'], 
+        #         color='k', alpha=.15)
+        #     plt.scatter(y_test.index,yPred)
+        #     plt.plot(yPred, label="test_pred")
+        #     plt.fill_between( self.yPred_test.index, self.yPred_test['obs_ci_lower'], self.yPred_test['obs_ci_upper'], 
+        #         color='k', alpha=.15)
+        #     plt.legend(loc="best")
+        #     plt.title('Forecast vs Actuals({},{}-step forcast)'.format(name,step))
+        #     plt.legend(loc='upper left', fontsize=8)
+        #     plt.show()
     def OGA_HDIC(self):
         self.OGA()
-        self.HDIC()
+        self.HDIC_Trim()
         self.predict(self.X,self.y)
         self.yPred_test = None
-
