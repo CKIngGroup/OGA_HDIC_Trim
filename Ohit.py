@@ -77,8 +77,14 @@ class Ohit:
         ## init preprocessing
         Jhat  = [None for _ in range(K+init_len)]
         if init != None:
-            XJhat = dx[init]
+            XJhat = dx[[init[0]]]
             XJhat = XJhat/((XJhat**2).apply(sum, axis = 0))**(1/2)
+            if init_len>1:
+                for i in range(1,init_len):
+                    rq = dx[[init[i]]] - XJhat.dot(XJhat.T).dot(dx[[init[i]]])
+                    rq = rq/(np.sum(rq**2))**(1/2)
+                    XJhat = pd.concat([XJhat,rq],axis = 1)
+            
             init_fit = sm.OLS(endog = dy,exog = XJhat).fit()
             dy = init_fit.resid
             Jhat[:init_len] = init
@@ -182,9 +188,6 @@ class Ohit:
         if type(X_test).__module__ == 'numpy':
             X_test = pd.DataFrame(X_test)
             X_test.columns = ['V'+str(i+1) for i in range(X.shape[1])]
-        if type(y_test).__module__ == 'numpy':    
-            y_test = y_test.reshape(-1)
-            y_test = pd.DataFrame(y_test)
         # check intercept
 
         if self.intercept:
@@ -202,9 +205,13 @@ class Ohit:
         fit = sm.OLS(endog = y,exog = X[J_Trim]).fit()    
         self.fit = fit
 
-   
+        # predict
+        self.yPred_train = fit.get_prediction(X[J_Trim]).summary_frame(alpha = conf)
+        self.yPred_test = fit.get_prediction(X_test[J_Trim]).summary_frame(alpha = conf)
+        
     def OGA_HDIC(self):
         self.OGA()
         self.HDIC_Trim()
-        self.predict(self.X,self.y)
+        self.predict(self.X)
         self.yPred_test = None
+
