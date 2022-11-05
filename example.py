@@ -1,7 +1,8 @@
-# %%
 import Ohit
 from Ohit import Ohit
 from sklearn.model_selection import train_test_split
+from numpy import random
+import numpy as np
 def generate_data1(n,p,q):
 
     beta = [3,3.75,4.5,5.25,6,6.75,7.5,8.25,9,9.75]
@@ -13,7 +14,8 @@ def generate_data1(n,p,q):
     epsilon = random.normal(0,1,size = (n))
     y = x_relevant @ beta + epsilon
     return np.concatenate([x_relevant,x_irrelevant],axis = 1),y,beta
-# %%
+
+
 if __name__ == '__main__':
     n = 400
     p = 4000
