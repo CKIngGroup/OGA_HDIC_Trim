@@ -24,14 +24,14 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     model = Ohit(X_train,y_train,HDIC_Type = 'HDBIC',intercept = False)
     model.OGA_HDIC()
-    model.predict(X_test,y_test)
+    model.predict(X_test)
     print(model.J_Trim)
     print(model.J_HDIC)
 
     # if init
     model = Ohit(X_train,y_train,HDIC_Type = 'HDBIC',init = [500],intercept = False)
     model.OGA_HDIC()
-    model.predict(X_test,y_test)
+    model.predict(X_test)
     print(model.J_Trim)
     print(model.J_HDIC)
     
